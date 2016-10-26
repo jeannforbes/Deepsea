@@ -1,2 +1,2 @@
 # Deepsea
-The sea, lights, and the fish that want to eat them.
+A game about protecting your lights from the hungry fish of the sea.
