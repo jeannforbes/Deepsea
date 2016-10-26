@@ -61,8 +61,6 @@ app.main = {
 			this.mouse.prevY = app.main.mouse.Y;
 			this.mouse.X = e.clientX;
 			this.mouse.Y = e.clientY;
-			this.mouse.node.pos.X = e.clientX;
-			this.mouse.node.pos.Y = e.clientY;
 
 			this.mouse.dX = (this.mouse.X - this.mouse.prevX);
 			this.mouse.dY = (this.mouse.Y - this.mouse.prevY);
@@ -75,16 +73,20 @@ app.main = {
 		}.bind(this));
 
 		//Make a light when you click
-		document.addEventListener('click', function(e){
+		/*document.addEventListener('click', function(e){
 			if(this.lights.length < this.CONSTANTS.MAX_LIGHTS){
 				this.numLights++;
 				var nLight = new light(new vector(this.mouse.X,this.mouse.Y), this.CONSTANTS.LIGHT_LENGTH, 
 					this.lightColors[parseInt(Math.random()*this.lightColors.length)]);
-				nLight.tip.prev = this.mouse.node;
 				this.lights.push(nLight);
 
 			}
-		}.bind(this));
+		}.bind(this));*/
+
+		this.numLights++;
+				var nLight = new light(new vector(this.mouse.X,this.mouse.Y), this.CONSTANTS.LIGHT_LENGTH, 
+					this.lightColors[parseInt(Math.random()*this.lightColors.length)]);
+				this.lights.push(nLight);
 
 		window.setInterval(function(){this.time.elapsed += 0.02;}.bind(this), 10);
 
@@ -93,8 +95,6 @@ app.main = {
 
 	update : function(){
 		if(this.paused) return;
-
-		this.mouse.node = new node(0,0,undefined, undefined, 'red');
 
 		this.animationID = window.requestAnimationFrame(this.update.bind(this));
 
