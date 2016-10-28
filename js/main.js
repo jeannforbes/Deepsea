@@ -9,21 +9,19 @@ app.main = {
 	bctx: undefined,
 	CONSTANTS: Object.freeze({
 		MAX_LIGHTS: 10,
-		LIGHT_LENGTH: 5,
+		LIGHT_LENGTH: 8,
 	}),
 	mouse: {
-		X: 0,
-		Y: 0,
+		pos: null,
+		prev: null,
 		clickX: 0,
 		clickY: 0,
-		prevX: 0,
-		prevY: 0,
 		dx: 0,
 		radius: 30,
 		node: undefined,
 	},
+	player: undefined,
 	lights: [],
-	fishies: [],
 	numLights: 0,
 	lightColors: ['orange', 'yellow', 'white'],
 	paused : false,
@@ -41,14 +39,8 @@ app.main = {
 		this.ctx = this.canvas.getContext("2d");
 		this.perlin = new Perlin('random seed');
 		this.date = new Date();
-
-		this.fishies.push(new fish(new vector(100,100), 100, 'red'));
-
-		//create lights
-		for(var i=0; i<this.numLights; i++){
-			this.lights[i] = new light(new vector(0,0), 10, 
-				this.lightColors[parseInt(Math.random()*this.lightColors.length)]);
-		}
+		this.mouse.pos = new vector(0,0);
+		this.mouse.prev = new vector(0,0);
 
 		/* Event Handlers */
 
@@ -57,10 +49,10 @@ app.main = {
 
 		//Updates mouse position
 		document.addEventListener('mousemove', function(e){
-			this.mouse.prevX = this.mouse.X;
-			this.mouse.prevY = app.main.mouse.Y;
-			this.mouse.X = e.clientX;
-			this.mouse.Y = e.clientY;
+			this.mouse.prev.y = this.mouse.X;
+			this.mouse.prev.y = app.main.mouse.Y;
+			this.mouse.pos.x = e.clientX;
+			this.mouse.pos.y = e.clientY;
 
 			this.mouse.dX = (this.mouse.X - this.mouse.prevX);
 			this.mouse.dY = (this.mouse.Y - this.mouse.prevY);
@@ -68,25 +60,18 @@ app.main = {
 
 		//Updates mouse clickX and clickY
 		document.addEventListener('click', function(e){
-			this.mouse.clickX = this.mouse.X;
-			this.mouse.clickY = this.mouse.Y;
+			this.mouse.clickX = this.mouse.pos.x;
+			this.mouse.clickY = this.mouse.pos.y;
 		}.bind(this));
 
-		//Make a light when you click
-		/*document.addEventListener('click', function(e){
-			if(this.lights.length < this.CONSTANTS.MAX_LIGHTS){
-				this.numLights++;
-				var nLight = new light(new vector(this.mouse.X,this.mouse.Y), this.CONSTANTS.LIGHT_LENGTH, 
-					this.lightColors[parseInt(Math.random()*this.lightColors.length)]);
-				this.lights.push(nLight);
+		//Make enemy lights
+		while(this.numLights < this.CONSTANTS.MAX_LIGHTS){
+			this.numLights++;
+			var nLight = new light(new vector(-10,-10), parseInt(Math.random()*5) + 1);
+			this.lights.push(nLight);
+		}
 
-			}
-		}.bind(this));*/
-
-		this.numLights++;
-				var nLight = new light(new vector(this.mouse.X,this.mouse.Y), this.CONSTANTS.LIGHT_LENGTH, 
-					this.lightColors[parseInt(Math.random()*this.lightColors.length)]);
-				this.lights.push(nLight);
+		this.player = new light(this.mouse.pos, this.CONSTANTS.LIGHT_LENGTH);
 
 		window.setInterval(function(){this.time.elapsed += 0.02;}.bind(this), 10);
 
@@ -108,54 +93,55 @@ app.main = {
 		this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
 	},
 
-	drawFishies : function(ctx){
-		for(var i=0; i<this.fishies.length; i++)
-			drawFish(ctx, this.fishies[i]);
-	},
-
-	drawFish : function(ctx, fish){
-		ctx.save();
-		ctx.fillStyle = this.fish.color;
-		ctx.fillRect(fish.pos.x, fish.pos.y, fish.size, fish.size);
-		ctx.restore();
-	},
-
 	updateLights : function(ctx){
 		ctx.lineWidth = 3;
 		for(var i=0; i<this.numLights; i++){
-			this.updateLight(ctx, this.lights[i], this.mouse.X, this.mouse.Y);
+			//if(this.player.length < 1) this.updateLight(ctx, this.lights[i], this.player.tail.pos);
+			if( distance(this.lights[i].head.pos, this.player.tail.pos) < 5 ){
+				//this.shortenLight(this.player);
+			}
 		}
+		this.updateLight(ctx, this.player, this.mouse.pos);
 	},
 
-	updateLight : function(ctx, light, x,y){
-		var currentNode = light.tip;
-		light.tip.pos = new vector(x,y);
+	updateLight : function(ctx, light, pos){
+		var currentNode = light.head;
+		light.head.pos = pos;
+		currentNode = light.head.next;
 		for(var i=1; i<light.length; i++){
-			if(currentNode.prev) this.nodeSeek(currentNode, currentNode.prev);
+			if(currentNode.prev) this.nodeArrive(currentNode, currentNode.prev);
 			ctx.save();
 			ctx.globalAlpha = light.length/(i+1) - 1;
-			this.drawNode(ctx, currentNode, "circle");
+			if(this.light != this.player) this.drawNode(ctx, currentNode, 'red');
+			else this.drawNode(ctx, currentNode, 'yellow');
 			ctx.restore();
 			currentNode = currentNode.next;
 		}
 	},
 
-	drawNode : function(ctx, node, style){
-		ctx.save();
-		ctx.fillStyle = node.color;
-		ctx.strokeStyle = node.color;
-		if(style == 'rect'){
-			ctx.fillRect(node.pos.x-5, node.pos.y-5, 10, 10);
-		} else if(style == 'circle'){
-			ctx.beginPath();
-			ctx.arc(node.pos.x, node.pos.y, 10, 10, 0, Math.PI*2);
-			ctx.stroke();
+	shortenLight : function(light){
+		if(light.length > 2){
+			light.length--;
+			light.tail = light.tail.prev;
+			light.tail.next = null;
 		}
-		if(node.prev && node.prev.prev) {
+	},
+
+	drawNode : function(ctx, node, color){
+		ctx.save();
+		//var color = perlinColor(this.perlin, this.time.elapsed+node.seed);
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 2;
+
+		ctx.beginPath();
+		ctx.arc(node.pos.x, node.pos.y, node.seed, 0, Math.PI*2);
+		ctx.stroke();
+		if(node.next) {
 			ctx.beginPath();
-			ctx.moveTo(node.prev.pos.x, node.prev.pos.y);
-			ctx.lineTo(node.pos.x, node.pos.y);
-			ctx.stroke();
+			ctx.moveTo(node.pos.x, node.pos.y);
+			ctx.lineTo(node.next.pos.x, node.next.pos.y);
+			//ctx.stroke();
+			ctx.closePath();
 		}
 		ctx.restore();
 	},
@@ -187,8 +173,8 @@ app.main = {
 	},
 
 	nodeArrive : function(n1, n2){
-		var dist = distance(n1.pos, n2.pos);
-		this.nodeMove(n1, n2.pos, 0.1);
+		var dist = distance(n1.pos, n2.pos)/2000;
+		this.nodeMove(n1, n2.pos, dist);
 	}
 
 };

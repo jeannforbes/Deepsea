@@ -11,44 +11,34 @@ function clamp(num, min, max) {
   return num <= min ? min : num >= max ? max : num;
 }
 
-function fish(pos, size, color){
+function light(pos, length){
 	this.pos = pos;
-	this.vel = new vector(0,0);
-	this.MAX_VEL = 0.5;
-	this.accel = new vector(0,0);
-	this.MAX_ACCEL = 0.25;
-	this.size = size;
-	this.color = color;
-}
-
-function light(pos, length, color){
-	this.pos = pos;
-	this.tip = new node(0,0,null,null, color),
+	this.head = new node(null, null);
+	this.tail = this.head;
 	this.length = length;
-	this.color = color;
-	this.speed = Math.random()*0.5+0.25;
 
 	(function makeLight(){
-		var currentNode = this.tip;
+		var currentNode = this.head;
 		for(var i=0; i<length; i++){
-			currentNode.next = new node(pos.x,pos.y,currentNode,null, color);
+			currentNode.next = new node(currentNode,null, (length-i)*1.5);
 			currentNode = currentNode.next;
 		}
+		this.tail = currentNode.prev;
 	}.bind(this))();
 }
 
-function node(x, y, prev, next, color){
+function node(prev, next, seed){
 	this.accel = new vector(0,0);
 	this.vel = new vector(0,0);
-	this.pos = new vector(x,y);
+	this.pos = new vector(250,250);
 
 	this.prev = prev;
 	this.next = next;
 
-	this.maxAccel = 0.6;
-	this.maxVel   = 0.8;
+	this.maxAccel = 3;
+	this.maxVel   = 0.5;
 
-	this.color = color;
+	this.seed = seed;
 }
 
 function vector(x,y){
@@ -93,4 +83,11 @@ function distance(v1, v2){
 
 function map(val, maxVal, max){
 	return (val)/maxVal * max;
+}
+
+function perlinColor(perlin, seed){
+	var r = parseInt(Math.abs(Math.sin(seed/2))*200)+50;
+	var g = r;//parseInt(Math.abs(Math.cos(seed))*150)+100;
+	var b = 0;//parseInt(Math.abs(Math.sin(seed))*150)+100;
+	return "rgba("+r+","+g+","+b+",1)";
 }
