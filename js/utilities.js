@@ -11,11 +11,12 @@ function clamp(num, min, max) {
   return num <= min ? min : num >= max ? max : num;
 }
 
-function light(pos, length){
-	this.pos = pos;
+function light(pos, length, color){
 	this.head = new node(null, null);
+	this.head.pos = pos;
 	this.tail = this.head;
 	this.length = length;
+	this.color = color;
 
 	(function makeLight(){
 		var currentNode = this.head;
@@ -30,13 +31,13 @@ function light(pos, length){
 function node(prev, next, seed){
 	this.accel = new vector(0,0);
 	this.vel = new vector(0,0);
-	this.pos = new vector(250,250);
+	this.pos = new vector(0,0);
 
 	this.prev = prev;
 	this.next = next;
 
-	this.maxAccel = 3;
-	this.maxVel   = 0.5;
+	this.maxAccel = 2;
+	this.maxVel   = 0.4;
 
 	this.seed = seed;
 }
@@ -74,6 +75,10 @@ function subtractVectors(v1, v2){
 	if(!v1) return v2;
 	if(!v2) return v1;
 	return (new vector((v2.x - v1.x), (v2.y - v1.y)) );
+}
+
+function crossProduct(v1, v2){
+	return (v1.magnitude() * v2.magnitude() * Math.sin(90));
 }
 
 function distance(v1, v2){
