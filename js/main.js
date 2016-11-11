@@ -9,8 +9,15 @@ app.main = {
 	bctx: undefined,
 	CONSTANTS: Object.freeze({
 		MAX_LIGHTS: 10,
-		LIGHT_LENGTH: 4,
+		LIGHT_LENGTH: 6,
 	}),
+	GAME_STATE:{
+        MAIN_MENU: -1,
+    	BEGIN: 0,
+    	PLAY: 1,
+    	END: 2
+    },
+    gameState: -1,
 	mouse: {
 		pos: null,
 		prev: null,
@@ -33,7 +40,9 @@ app.main = {
 		deltaTime: 0,
 	},
 	bgColors : ['#03070A','#15211D','#1B393B','#2F4E50','#71A692'],
+	bgGradient: undefined,
 	animationID: undefined,
+	alphaUI : 1,
 
 	init : function(){
 		this.canvas = document.querySelector('#canvas');
@@ -42,6 +51,13 @@ app.main = {
 		this.date = new Date();
 		this.mouse.pos = new vector(0,0);
 		this.mouse.prev = new vector(0,0);
+		this.gameState = this.GAME_STATE.MAIN_MENU;
+
+		this.bgGradient = this.ctx.createLinearGradient(
+			this.canvas.width/2,0,this.canvas.width/2, this.canvas.height);
+		for(var i=0; i<this.bgColors.length; i++){
+			this.bgGradient.addColorStop(1 - i/this.bgColors.length, this.bgColors[i]);
+		}
 
 		/* Event Handlers */
 
@@ -65,6 +81,8 @@ app.main = {
 		document.addEventListener('click', function(e){
 			this.mouse.clickX = this.mouse.pos.x;
 			this.mouse.clickY = this.mouse.pos.y;
+			if(this.gameState == this.GAME_STATE.MAIN_MENU)
+				this.gameState = this.GAME_STATE.BEGIN;
 		}.bind(this));
 
 		//Make player
@@ -80,10 +98,10 @@ app.main = {
 
 		this.animationID = window.requestAnimationFrame(this.update.bind(this));
 
-		this.clearCanvas();
 		this.drawBG(this.ctx);
-		this.updatePlayer(this.ctx);
-		this.updateEnemies(this.ctx);
+		if(this.gameState == this.GAME_STATE.PLAY) this.updatePlayer(this.ctx);
+		if(this.gameState == this.GAME_STATE.PLAY) this.updateEnemies(this.ctx);
+		this.drawUI(this.ctx);
 
 		if(this.time.elapsed > 1 && this.lights.length < 1) this.makeEnemy();
 	},
@@ -95,6 +113,85 @@ app.main = {
 		this.lights.push(enemy);
 
 		console.log("enemy made");
+	},
+
+	drawUI : function(ctx){
+
+		var alpha = 1;
+
+		if(this.gameState == this.GAME_STATE.MAIN_MENU){
+			ctx.save();
+
+			//Background
+			ctx.globalAlpha = alpha;
+
+			ctx.fillStyle = 'black';
+			ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+
+			//Title
+			alpha = clamp(this.time.elapsed/10, 0, 1);
+			ctx.globalAlpha = alpha;
+
+			fillText(
+				ctx, 
+				"Deepsea", 
+				window.innerWidth/2 - 60, window.innerHeight/2, 
+				'80px Amatic SC', 
+				'#FFF');
+
+			//Click!
+			alpha = clamp(this.time.elapsed/10 - 0.5, 0, 1);
+			ctx.globalAlpha = alpha;
+
+			fillText(
+				ctx, 
+				"Click to continue...", 
+				window.innerWidth/2 - 60, window.innerHeight/2 + 60, 
+				'20px Raleway', 
+				'#FFF');
+			ctx.restore();
+		}
+		else if(this.gameState == this.GAME_STATE.BEGIN){
+			ctx.save();
+			ctx.globalAlpha = (this.alphaUI-=0.01);
+			if(this.alphaUI < 0){
+				ctx.globalAlpha = 1;
+				this.gameState = this.GAME_STATE.PLAY;
+				return;
+			}
+
+			ctx.fillStyle = 'black';
+			ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+			fillText(
+				ctx, 
+				"Deepsea", 
+				window.innerWidth/2 - 60, window.innerHeight/2, 
+				'80px Amatic SC', 
+				'#FFF');
+			fillText(
+				ctx, 
+				"Click to continue...", 
+				window.innerWidth/2 - 60, window.innerHeight/2 + 60, 
+				'20px Raleway', 
+				'#FFF');
+			ctx.restore();
+
+		}
+		else if(this.gameState == this.GAME_STATE.PLAY){
+			ctx.save();
+
+
+			ctx.restore();
+		}
+	},
+
+	drawBG : function(ctx){
+		var h = this.canvas.height;
+		var w = this.canvas.width;
+		ctx.save()
+		ctx.fillStyle = this.bgGradient;
+		ctx.fillRect(0,0,w,h);
+		ctx.restore();
 	},
 
 	clearCanvas : function(){
@@ -117,7 +214,7 @@ app.main = {
 		var currentNode = this.player.head.next;
 		for(var i=1; i<this.player.length; i++){
 			//CHECK COLLISIONS
-			this.nodeCollideWithEnemy(currentNode);
+			//this.nodeCollideWithEnemy(currentNode);
 			//MOVE NODE
 			if(currentNode && currentNode.prev) this.nodeArrive(currentNode, currentNode.prev, 1);
 			//DRAW NODE
@@ -152,40 +249,19 @@ app.main = {
 
 	drawNode : function(ctx, node, color){
 		ctx.save();
-		//var color = perlinColor(this.perlin, this.time.elapsed+node.seed);
-		ctx.strokeStyle = color;
-		ctx.lineWidth = 2;
 
-		ctx.beginPath();
-		ctx.arc(node.pos.x, node.pos.y, node.seed + 5, 0, Math.PI*2);
-		ctx.stroke();
-		if(node.next) {
-			ctx.beginPath();
-			ctx.moveTo(node.pos.x, node.pos.y);
-			ctx.lineTo(node.next.pos.x, node.next.pos.y);
-			//ctx.stroke();
-			ctx.closePath();
-		}
+		ctx.translate(node.pos.x-32*node.radius, node.pos.y-32*node.radius)
+		ctx.scale(node.radius,node.radius);
+
+		if(node.light == this.player) ctx.drawImage(document.getElementById("nodeImg0"), 0,0);
+		else ctx.drawImage(document.getElementById("nodeImg1"), 0, 0);
+
 		ctx.restore();
-	},
-
-	drawBG : function(ctx){
-		var h = this.canvas.height / this.bgColors.length;
-		var w = this.canvas.width;
-		for(var i=1;i<=this.bgColors.length;i++){
-			ctx.save()
-			ctx.globalAlpha = 0.7;
-			ctx.fillStyle = this.bgColors[i-1];
-			ctx.fillRect(0, this.canvas.height - h * i, 
-						 w, h+(this.perlin.noise(this.time.elapsed,i,0)*50));
-			ctx.restore();
-		}
 	},
 
 	nodeCollideWithEnemy : function(n){
 		for(var i=0; i<this.lights.length; i++){
 			if(this.nodeCollide(n, this.lights[i].head)){
-				console.log(this.lights[i].head);
 				this.nodeDestroy(n);
 				n.light.length--;
 				return;
@@ -195,8 +271,10 @@ app.main = {
 
 	nodeCollide : function(n1, n2){
 		var dist = distance(n1.pos, n2.pos);
-		console.log("dist: "+dist);
 		if( n1 && n2 && (dist < 1)){
+			console.log("\ndist: "+dist);
+			console.dir(n1);
+			console.dir(n2);
 			return true;
 		}
 		return false;

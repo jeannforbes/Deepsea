@@ -7,6 +7,15 @@ function resizeCanvas(){
 	canvas.height = window.innerHeight;
 }
 
+// draws text with the given parameters
+function fillText(ctx, string, x, y, css, color) {
+	ctx.save();
+	ctx.font = css;
+	ctx.fillStyle = color;
+	ctx.fillText(string, x, y);
+	ctx.restore();
+}
+
 function clamp(num, min, max) {
   return num <= min ? min : num >= max ? max : num;
 }
@@ -18,32 +27,29 @@ function light(pos, length, color){
 	this.length = length;
 	this.color = color;
 	this.aggression = Math.random();
-	console.log(this.aggression);
 
 	(function makeLight(){
 		var currentNode = this.head;
 		for(var i=0; i<length; i++){
-			currentNode.next = new node(this, pos, currentNode,null, (length-i)*1.5);
+			currentNode.next = new node(this, pos, currentNode, null, 1 - i/length);
 			currentNode = currentNode.next;
 		}
 		this.tail = currentNode.prev;
 	}.bind(this))();
 }
 
-function node(light, pos, prev, next, seed){
+function node(light, pos, prev, next, radius){
 	this.light = light;
 	this.accel = new vector(0,0);
 	this.vel = new vector(0,0);
 	this.pos = pos;
-	this.radius = 10;
+	this.radius = radius;
 
 	this.prev = prev;
 	this.next = next;
 
 	this.maxAccel = 2;
 	this.maxVel   = 0.4;
-
-	this.seed = seed;
 }
 
 function vector(x,y){
