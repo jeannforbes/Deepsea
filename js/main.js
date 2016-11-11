@@ -9,7 +9,7 @@ app.main = {
 	bctx: undefined,
 	CONSTANTS: Object.freeze({
 		MAX_LIGHTS: 10,
-		LIGHT_LENGTH: 8,
+		LIGHT_LENGTH: 4,
 	}),
 	mouse: {
 		pos: null,
@@ -59,10 +59,6 @@ app.main = {
 			this.mouse.dY = (this.mouse.Y - this.mouse.prev.y);
 
 			this.mouse.direction = new vector(0,0);
-			/*if( this.mouse.prev.x - this.mouse.pos.x > 0) this.mouse.direction.x = -1;
-			if( this.mouse.prev.y - this.mouse.pos.y > 0) this.mouse.direction.y = -1;
-			if( this.mouse.prev.y - this.mouse.pos.y < 0) this.mouse.direction.x = 1;
-			if( this.mouse.prev.y - this.mouse.pos.y < 0) this.mouse.direction.y = 1;*/
 		}.bind(this));
 
 		//Updates mouse clickX and clickY
@@ -86,15 +82,16 @@ app.main = {
 
 		this.clearCanvas();
 		this.drawBG(this.ctx);
-		this.updateLights(this.ctx);
+		this.updatePlayer(this.ctx);
+		this.updateEnemies(this.ctx);
 
-		if(this.time.elapsed > 10 && this.lights.length < 1) this.makeEnemy();
+		if(this.time.elapsed > 1 && this.lights.length < 1) this.makeEnemy();
 	},
 
 	makeEnemy : function(){
 		this.numLights++;
 
-		var enemy = new light(new vector(-2000,-2000), 15, 'red');
+		var enemy = new light(new vector(200,200), 5, 'red');
 		this.lights.push(enemy);
 
 		console.log("enemy made");
@@ -105,26 +102,51 @@ app.main = {
 		this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
 	},
 
-	updateLights : function(ctx){
+	//Update all enemies
+	updateEnemies : function(ctx){
 		ctx.lineWidth = 3;
 		for(var i=0; i<this.lights.length; i++){
-			this.updateLight(ctx, this.lights[i], this.player.tail.pos);
+			this.nodeWander(this.lights[i].head, 1);
+			this.updateLight(ctx, this.lights[i], this.player.tail.pos, this.lights[i].aggression);
 		}
-		this.updateLight(ctx, this.player, this.mouse.pos);
 	},
 
-	updateLight : function(ctx, light, pos){
+	//Update the player position using the mouse position
+	updatePlayer : function(ctx){
+		this.player.head.pos = this.mouse.pos;
+		var currentNode = this.player.head.next;
+		for(var i=1; i<this.player.length; i++){
+			//CHECK COLLISIONS
+			this.nodeCollideWithEnemy(currentNode);
+			//MOVE NODE
+			if(currentNode && currentNode.prev) this.nodeArrive(currentNode, currentNode.prev, 1);
+			//DRAW NODE
+			ctx.save();
+			ctx.globalAlpha = this.player.length/(i+1) - 1;
+			if(currentNode) this.drawNode(ctx, currentNode, this.player.color);
+			ctx.restore();
+			currentNode = currentNode.next;
+		}
+	},
+
+	//Updates the whole string of lights
+	updateLight : function(ctx, light, pos, weight){
 		var currentNode = light.head;
 		light.head.pos = pos;
 		currentNode = light.head.next;
 		for(var i=1; i<light.length; i++){
-			if(currentNode.prev && light == this.player) this.nodeSeek(currentNode, currentNode.prev, 1);
-			else if(currentNode.prev) this.nodeArrive(currentNode, currentNode.prev, 1);
+			//MOVE NODE
+			/*if(currentNode.prev){ 
+				this.nodeWander(currentNode, 1);
+				this.nodeArrive(currentNode, currentNode.prev, weight);
+			}*/
+			//DRAW NODE
 			ctx.save();
 			ctx.globalAlpha = light.length/(i+1) - 1;
 			this.drawNode(ctx, currentNode, light.color);
 			ctx.restore();
 			currentNode = currentNode.next;
+			weight = 1;
 		}
 	},
 
@@ -135,7 +157,7 @@ app.main = {
 		ctx.lineWidth = 2;
 
 		ctx.beginPath();
-		ctx.arc(node.pos.x, node.pos.y, node.seed, 0, Math.PI*2);
+		ctx.arc(node.pos.x, node.pos.y, node.seed + 5, 0, Math.PI*2);
 		ctx.stroke();
 		if(node.next) {
 			ctx.beginPath();
@@ -160,6 +182,34 @@ app.main = {
 		}
 	},
 
+	nodeCollideWithEnemy : function(n){
+		for(var i=0; i<this.lights.length; i++){
+			if(this.nodeCollide(n, this.lights[i].head)){
+				console.log(this.lights[i].head);
+				this.nodeDestroy(n);
+				n.light.length--;
+				return;
+			}
+		}
+	},
+
+	nodeCollide : function(n1, n2){
+		var dist = distance(n1.pos, n2.pos);
+		console.log("dist: "+dist);
+		if( n1 && n2 && (dist < 1)){
+			return true;
+		}
+		return false;
+	},
+
+	nodeDestroy : function(node){
+		if(node.light.head == node) node.light.head = node.next;
+		if(node.light.tail == node) node.light.tail = node.prev;
+
+		node.prev.next = node.next;
+		node.next.prev = node.prev;
+	},
+
 	nodeMove : function(node, pos, accel){
 		node.accel = subtractVectors(node.pos, pos);
 		node.accel = multVector(node.accel, accel);
@@ -177,8 +227,14 @@ app.main = {
 		var goal = n2;
 		var dist = distance(n1.pos, n2.pos)/2000;
 		//if(dist < 0.05) goal.pos = addVectors(goal.pos, this.mouse.direction);
-		if(dist < 0.01) dist = 0;
+		//if(dist < 0.1) dist = 0;
 		this.nodeMove(n1, goal.pos, dist * weight);
+	},
+
+	nodeWander : function(n1, weight){
+		var goal = new vector(this.perlin.noise(this.time.elapsed, 0, 0), this.perlin.noise(0,this.time.elapsed, 0));
+		var goal = addVectors(n1.pos, goal);
+		this.nodeMove(n1, goal, weight);
 	},
 
 };
