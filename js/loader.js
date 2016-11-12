@@ -1,11 +1,10 @@
-/*
-loader.js
-*/
+//loader.js
+//made by Jeannette Forbes
+
 "use strict";
 
-var app = app || {}; //singleton
+var app = app || {};
 
-//When the window first loads, call main's initialization
 window.onload = function(){
 	app.main.Emitter = app.Emitter;
 	app.sound.init();

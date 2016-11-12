@@ -1,3 +1,6 @@
+//main.js
+//made by Jeannette Forbes
+
 "use strict";
 
 var app = app || {};

@@ -17,7 +17,7 @@ app.sound = (function(){
 
 	function init(){
 		bgAudio = document.querySelector("#bgAudio");
-		bgAudio.volume=0;
+		bgAudio.volume=0.2;
 		effectAudio = document.querySelector("#effectAudio");
 		effectAudio.volume = 0.25;
 		playBGAudio();

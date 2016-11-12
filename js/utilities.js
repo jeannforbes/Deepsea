@@ -1,3 +1,6 @@
+//utilities.js
+//made by Jeannette Forbes
+
 var app = app || {};
 
 //Resizes canvas size to window size
