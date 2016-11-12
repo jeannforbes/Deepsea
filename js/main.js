@@ -6,16 +6,19 @@
 var app = app || {};
 
 app.main = {
+	//Canvas & buffer
 	canvas: undefined,
 	ctx: undefined,
 	buffer: undefined,
 	bctx: undefined,
+	//Contants that shall not change
 	CONSTANTS: Object.freeze({
 		MAX_LIGHTS: 10,
 		LIGHT_LENGTH: 6,
 		SPRITE_WIDTH: 64,
 		SPRITE_HEIGHT: 64,
 	}),
+	//These are all possible game states
 	GAME_STATE:{
         MAIN_MENU: -1,
     	BEGIN: 0,
@@ -23,7 +26,9 @@ app.main = {
     	NEXT_LEVEL: 2,
     	END: 3
     },
+    //Current game state
     gameState: -1,
+    //"mouse"'s current values (may be controlled by keyboard)
 	mouse: {
 		pos: null,
 		prev: null,
@@ -32,35 +37,46 @@ app.main = {
 		node: undefined,
 		direction: undefined,
 	},
+	//Are we using the mouse or keyboard controls?
 	usingMouse: false,
 	usingKeyboard: false,
+	//Player
 	player: undefined,
+	//Enemies array
 	lights: [],
+	//Current number of enemies
 	numLights: 1,
-	lightColors: ['orange', 'yellow', 'white'],
 	paused : false,
 	perlin : undefined,
 	date : undefined,
+	//Handles tracks time elapsed since start & deltaTime
 	time : {
 		elapsed: 0,
 		lastTime: 0,
 		deltaTime: 0,
 	},
+	//Used to create background gradient
 	bgColors : ['#03070A','#15211D','#1B393B','#2F4E50','#71A692'],
 	bgGradient: undefined,
+	//Used to step spritesheet transitions
 	animationID: undefined,
+	//Used to fade out UI transitions
 	alphaUI : 1,
+	//Controls bg music and SFX
 	sound: undefined,
+	//Bubble emitters
 	emitters: [],
 	Emitter: undefined,
 
+	//Initializes the game
+	//	ONLY CALL THIS ONCE (window.onload)
 	init : function(){
 		this.canvas = document.querySelector('#canvas');
 		this.ctx = this.canvas.getContext("2d");
 		this.perlin = new Perlin('random seed');
 		this.date = new Date();
-		this.mouse.pos = new vector(this.canvas.width/2,this.canvas.height/2);
-		this.mouse.prev = new vector(0,0);
+		this.mouse.pos = new Vector(this.canvas.width/2,this.canvas.height/2);
+		this.mouse.prev = new Vector(0,0);
 		this.gameState = this.GAME_STATE.MAIN_MENU;
 
 		this.bgGradient = this.ctx.createLinearGradient(
@@ -99,19 +115,23 @@ app.main = {
 					this.mouse.dX = (this.mouse.X - this.mouse.prev.x);
 					this.mouse.dY = (this.mouse.Y - this.mouse.prev.y);
 
-					this.mouse.direction = new vector(0,0);
+					this.mouse.direction = new Vector(0,0);
 				}.bind(this));
 			
 			}
 		}.bind(this));
 
+		//Track elapsed time
 		window.setInterval(function(){this.time.elapsed += 0.02;}.bind(this), 10);
 
-		this.player = new light(this.mouse.pos, this.CONSTANTS.LIGHT_LENGTH);
+		//Create player
+		this.player = new Light(this.mouse.pos, this.CONSTANTS.LIGHT_LENGTH);
 
+		//Resize canvas to browser size
 		resizeCanvas();
 	},
 
+	//Responsible for updating game state
 	update : function(){
 		if(this.paused) return;
 
@@ -133,16 +153,21 @@ app.main = {
 		//If it's the next level, make it so!
 		if(this.gameState == this.GAME_STATE.NEXT_LEVEL) this.nextLevel();
 
-		//Draw everything
+		/* UPDATE & DRAW */
+
+		//Draw BG
 		this.drawBG(this.ctx);
+		//Draw & update organisms
 		if(this.gameState == this.GAME_STATE.PLAY) {
 			this.updateEnemies(this.ctx);
 			this.updatePlayer(this.ctx);
 		}
+		//Draw bubbles
 		for(var i=0; i<this.emitters.length; i++){
 			this.emitters[i].updateAndDraw(this.ctx, 
 				{x:this.canvas.width/5 * i + this.canvas.width/5,y:this.canvas.height});
 		}
+		//Draw UI
 		this.drawUI(this.ctx);
 
 		if(this.time.elapsed > 1 && this.lights.length < this.numLights) this.makeEnemy();
@@ -150,6 +175,10 @@ app.main = {
 		this.keyboardMovement();
 	},
 
+	//Progress the game to the next level
+	//	Reset the player's length
+	//  Add another enemy to the total number of enemies & make them
+	//	Set game state to play
 	nextLevel : function(){
 
 		this.lights = [];
@@ -157,11 +186,12 @@ app.main = {
 		this.numLights++;
 		for(var i=0; i<this.numLights; i++) this.makeEnemy();
 
-		this.player = new light(this.mouse.pos, this.CONSTANTS.LIGHT_LENGTH);
+		this.player = new Light(this.mouse.pos, this.CONSTANTS.LIGHT_LENGTH);
 
 		this.gameState = this.GAME_STATE.PLAY;
 	},
 
+	//Move the mouse cursor with keyboard controls instead of the actual mouse position
 	keyboardMovement : function(){
 		var speed = 5;
 		//x movement
@@ -176,12 +206,14 @@ app.main = {
 			if(this.mouse.pos.y > 0 ) this.mouse.pos.y-=speed;
 	},
 
+	//Make another enemy light
 	makeEnemy : function(){
 
-		var enemy = new light(new vector(Math.random()*this.canvas.width,-100), 5, 'red');
+		var enemy = new Light(new Vector(Math.random()*this.canvas.width,-100), 5, 'red');
 		this.lights.push(enemy);
 	},
 
+	//Draws any text/fonts & instructional images
 	drawUI : function(ctx){
 
 		var alpha = 1;
@@ -287,6 +319,16 @@ app.main = {
 				window.innerWidth/2 - 80, window.innerHeight/2, 
 				'40px Raleway', 
 				'#FFF');
+			ctx.globalAlpha = this.alphaUI - 0.2;
+
+			ctx.fillStyle = 'black';
+			ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+			fillText(
+				ctx, 
+				"\"Thank you for playing!\" - Jeannette Forbes, Developer", 
+				window.innerWidth/2 - 120, window.innerHeight/2 + 40, 
+				'20px Raleway', 
+				'#FFF');
 			ctx.restore();
 
 			if(this.alphaUI > 0.9){
@@ -294,7 +336,9 @@ app.main = {
 				this.lights = [];
 				this.numLights = 1;
 				for(var i=0; i<this.numLights; i++) this.makeEnemy();
-				this.player = new light(this.mouse.pos, this.CONSTANTS.LIGHT_LENGTH);
+				this.player = new Light(this.mouse.pos, this.CONSTANTS.LIGHT_LENGTH);
+				this.usingMouse = false;
+				this.usingKeyboard = false;
 				this.alphaUI = 0;
 			}
 		} else if(this.gameState == this.GAME_STATE.NEXT_LEVEL){
@@ -302,6 +346,7 @@ app.main = {
 		}
 	},
 
+	//Draws the background gradient
 	drawBG : function(ctx){
 		var h = this.canvas.height;
 		var w = this.canvas.width;
@@ -311,6 +356,7 @@ app.main = {
 		ctx.restore();
 	},
 
+	//Clears the canvas to black
 	clearCanvas : function(){
 		this.ctx.fillStyle = 'black';
 		this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
@@ -325,6 +371,7 @@ app.main = {
 		}
 	},
 
+	//Updates bubble positions & draws to canvas
 	updateParticles : function(ctx){
 		for(var i=0; i<particles.length; i++){
 			particles.updateAndDraw(ctx,100,100);
@@ -367,14 +414,15 @@ app.main = {
 			ctx.save();
 			ctx.globalAlpha = light.length/(i+1) - 0.1;
 			if (ctx.globalAlpha < 0.5 ) ctx.globalAlpha = 0.5;
-			this.drawNode(ctx, currentNode, light.color);
+			this.drawNode(ctx, currentNode);
 			ctx.restore();
 			currentNode = currentNode.next;
 			weight = 1;
 		}
 	},
 
-	drawNode : function(ctx, node, color){
+	//Draws a single node to the canvas
+	drawNode : function(ctx, node){
 		var sprite;
 		if(node.light == this.player) sprite = document.getElementById("playerSpritesheet");
 		else sprite = document.getElementById("enemySpritesheet");
@@ -462,8 +510,9 @@ app.main = {
 		this.sound.playEffect("2.mp3");
 	},
 
+	//Adds another node to a Light
 	lengthenLight : function(l){ 
-		var nLight = new light(l.head.pos, l.length+1);
+		var nLight = new Light(l.head.pos, l.length+1);
 		var cNode1 = nLight.head;
 		var cNode2 = l.head;
 		for(var i=0; i<l.length; i++){
@@ -474,6 +523,7 @@ app.main = {
 		return nLight;
 	},
 
+	//Moves a node to the given position
 	nodeMove : function(node, pos, accel){
 		node.accel = subtractVectors(node.pos, pos);
 		node.accel = multVector(node.accel, accel);
@@ -484,18 +534,21 @@ app.main = {
 		node.pos = addVectors(node.pos, node.vel);
 	},
 
+	// n1 will seek n2's position
 	nodeSeek : function(n1, n2, weight){
 		this.nodeMove(n1, n2.pos, 0.1 * weight);
 	},
 
+	// n1 will arrive at n2's position
 	nodeArrive : function(n1, n2, weight){
 		var goal = n2;
 		var dist = distance(n1.pos, n2.pos)/2000;
 		this.nodeMove(n1, goal.pos, dist * weight);
 	},
 
+	// Simulates ocean currents -- can cause unpredictable behavior
 	nodeWander : function(n1, weight){
-		var goal = new vector(this.perlin.noise(this.time.elapsed, 0, 0), this.perlin.noise(0,this.time.elapsed, 0));
+		var goal = new Vector(this.perlin.noise(this.time.elapsed, 0, 0), this.perlin.noise(0,this.time.elapsed, 0));
 		var goal = addVectors(n1.pos, goal);
 		this.nodeMove(n1, goal, weight);
 	},

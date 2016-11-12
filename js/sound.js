@@ -15,6 +15,7 @@ app.sound = (function(){
 	var loseSound = "lose.mp3";
 	
 
+	//Initializes the sound module with bgAudio and sfx
 	function init(){
 		bgAudio = document.querySelector("#bgAudio");
 		bgAudio.volume=0.2;
@@ -23,22 +24,25 @@ app.sound = (function(){
 		playBGAudio();
 	}
 
+	//Public accessor to play bgAudio
 	function playBGAudio(){
 		bgAudio.play();
 	}
 
+	//Public accessor to pause bgaudio
 	function stopBGAudio(){
 		bgAudio.pause();
-		bgAudio.currentTime = 0;
+		//bgAudio.currentTime = 0;
 	}
 
+	//Public accessor to play an available sfx
 	function playEffect(src){
 		effectAudio.currentTime = 0;
 		effectAudio.src = "assets/sfx/" + src;
 		effectAudio.play();
 	}
 		
-	// export a public interface to this module
+	//Export a public interface to this module
 	return{
 		init: init,
 		playBGAudio: playBGAudio,
