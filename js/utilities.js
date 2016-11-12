@@ -2,9 +2,8 @@ var app = app || {};
 
 //Resizes canvas size to window size
 function resizeCanvas(){
-	var canvas = app.main.canvas;
-	canvas.width = window.innerWidth;
-	canvas.height = window.innerHeight;
+	app.main.canvas.width = window.innerWidth;
+	app.main.canvas.height = window.innerHeight;
 }
 
 // draws text with the given parameters
@@ -20,30 +19,38 @@ function clamp(num, min, max) {
   return num <= min ? min : num >= max ? max : num;
 }
 
-function light(pos, length, color){
-	this.head = new node(null, null);
+function getRandom(min, max) {
+  	return Math.random() * (max - min) + min;
+}
+
+function light(pos, length){
+	this.head = new node(this, pos, null, null, 1);
 	this.head.pos = pos;
 	this.tail = this.head;
 	this.length = length;
-	this.color = color;
-	this.aggression = Math.random();
+	this.aggression = Math.random()/2;
 
 	(function makeLight(){
 		var currentNode = this.head;
 		for(var i=0; i<length; i++){
 			currentNode.next = new node(this, pos, currentNode, null, 1 - i/length);
 			currentNode = currentNode.next;
+			if(currentNode.scale < 0.6) currentNode.scale = 0.6;
 		}
 		this.tail = currentNode.prev;
+		this.tail.isTail = true;
 	}.bind(this))();
 }
 
-function node(light, pos, prev, next, radius){
+function node(light, pos, prev, next, scale){
 	this.light = light;
 	this.accel = new vector(0,0);
 	this.vel = new vector(0,0);
 	this.pos = pos;
-	this.radius = radius;
+	this.scale = scale;
+	this.frame = 0;
+	this.isTail = false;
+	this.safe = 0;
 
 	this.prev = prev;
 	this.next = next;
