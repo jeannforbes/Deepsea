@@ -234,18 +234,28 @@ app.main = {
 			fillText(
 				ctx, 
 				"Ouroboros", 
-				this.canvas.width/2 - 60, this.canvas.height/2, 
+				this.canvas.width/2 - 70, this.canvas.height/2 - 45, 
 				'80px Amatic SC', 
 				'#FFF');
 
 			//Click!
 			alpha = clamp(this.time.elapsed/10 - 0.5, 0, 1);
 			ctx.globalAlpha = alpha;
+
+			fillText(
+				ctx, 
+				"\"The serpent eating its tail.\"", 
+				this.canvas.width/2 - 90, this.canvas.height/2, 
+				'35px Amatic SC', 
+				'#FFF');
+
+			alpha = clamp(this.time.elapsed/10 - 0.5, 0, 1);
+			ctx.globalAlpha = alpha;
 			
 			fillText(
 				ctx, 
 				"Click to use the mouse. . .", 
-				this.canvas.width/3- 100, this.canvas.height/2 + 60, 
+				this.canvas.width/3- 120, this.canvas.height/2 + 80, 
 				'20px Raleway', 
 				'#FFF');
 			ctx.drawImage(document.querySelector("#mouseImg"), 
